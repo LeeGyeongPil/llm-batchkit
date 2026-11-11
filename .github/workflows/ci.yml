@@ -1,0 +1,21 @@
+# Offline tests only: no API key and no external network are needed (practice mock server on 127.0.0.1).
+name: ci
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22, 24]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run demo
