@@ -267,12 +267,14 @@ async function cmdMockServer(argv: string[], io: CliIo): Promise<number> {
     }
     throw e;
   }
-  io.out(`${MOCK_NOTICE}\nlistening on ${server.baseUrl}\nTry: llm-batchkit submit <manifest> --base-url ${server.baseUrl}\nPress Ctrl+C to stop.\n`);
-  await new Promise<void>((done) => {
-    const stop = (): void => done();
-    process.once('SIGINT', stop);
-    process.once('SIGTERM', stop);
+  // Install the signal handlers BEFORE announcing the address: whoever reads "listening on" may signal us right away,
+  // and a signal that arrives before the handlers exist kills the process (exit code null) instead of stopping it cleanly.
+  const stopped = new Promise<void>((done) => {
+    process.once('SIGINT', done);
+    process.once('SIGTERM', done);
   });
+  io.out(`${MOCK_NOTICE}\nlistening on ${server.baseUrl}\nTry: llm-batchkit submit <manifest> --base-url ${server.baseUrl}\nPress Ctrl+C to stop.\n`);
+  await stopped;
   await server.close();
   return 0;
 }
