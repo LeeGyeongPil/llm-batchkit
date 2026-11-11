@@ -1,5 +1,5 @@
-import { spawnSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { chmodSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { startMockServer } from '../src/mock/server.js';
@@ -72,6 +72,88 @@ describe('cli edge cases', () => {
     } finally {
       await busy.close();
     }
+  });
+
+  // Real subprocess: the stack trace and exit 70 only come from the entry-point rejection handler.
+  describe('mock-server --scenario with an unusable file', () => {
+    const runScenario = (p: string): ReturnType<typeof spawnSync<string>> =>
+      spawnSync('node', [join(root, 'dist', 'cli.js'), 'mock-server', '--scenario', p], { encoding: 'utf8', timeout: 30_000 });
+
+    const expectFriendly = (p: string, r: ReturnType<typeof runScenario>): void => {
+      expect(r.status).toBe(1);
+      expect(r.stderr.startsWith('error: ')).toBe(true);
+      expect(r.stderr).toContain(p);
+      expect(r.stderr).toContain('  fix: ');
+      expect(r.stderr).not.toContain('    at ');
+      expect(r.stderr).not.toContain('unexpected error');
+    };
+
+    it('missing file', () => {
+      const p = join(tmp(), 'nope.json');
+      const r = runScenario(p);
+      expectFriendly(p, r);
+      expect(r.stderr).toContain('Cannot read scenario');
+    });
+
+    it('directory instead of a file', () => {
+      const p = tmp();
+      const r = runScenario(p);
+      expectFriendly(p, r);
+      expect(r.stderr).toContain('Cannot read scenario');
+    });
+
+    it('unreadable file', (ctx) => {
+      if (process.platform === 'win32' || process.getuid?.() === 0) return ctx.skip();
+      const p = join(tmp(), 'noread.json');
+      writeFileSync(p, '{"results":{}}', { mode: 0o000 });
+      chmodSync(p, 0o000);
+      const r = runScenario(p);
+      expectFriendly(p, r);
+      expect(r.stderr).toContain('Cannot read scenario');
+    });
+
+    it('invalid JSON', () => {
+      const p = join(tmp(), 'bad.json');
+      writeFileSync(p, '{bad');
+      const r = runScenario(p);
+      expectFriendly(p, r);
+      expect(r.stderr).toContain('not valid JSON');
+    });
+
+    it('empty file', () => {
+      const p = join(tmp(), 'empty.json');
+      writeFileSync(p, '');
+      const r = runScenario(p);
+      expectFriendly(p, r);
+      expect(r.stderr).toContain('is empty');
+    });
+
+    it('valid JSON in the wrong shape', () => {
+      const p = join(tmp(), 'schema.json');
+      writeFileSync(p, '{"x":1}');
+      const r = runScenario(p);
+      expectFriendly(p, r);
+      expect(r.stderr).toContain('Scenario must be');
+    });
+
+    it('a good scenario file still starts and stops cleanly', async () => {
+      const child = spawn('node', [join(root, 'dist', 'cli.js'), 'mock-server', '--scenario', join(root, 'examples', 'mock-scenario.json'), '--port', '0'], { stdio: ['ignore', 'pipe', 'pipe'] });
+      let out = '';
+      const exited = new Promise<number | null>((done) => child.once('exit', (code) => done(code)));
+      await new Promise<void>((ready, fail) => {
+        const timer = setTimeout(() => fail(new Error('mock-server did not start')), 20_000);
+        child.stdout.on('data', (d: Buffer) => {
+          out += d.toString();
+          if (out.includes('listening on http://127.0.0.1:')) {
+            clearTimeout(timer);
+            ready();
+          }
+        });
+      });
+      child.kill('SIGTERM');
+      expect(await exited).toBe(0);
+      expect(out).toContain('PRACTICE MOCK MODE');
+    }, 40_000);
   });
 
   it('lint treats an empty file as an error, like split does', async () => {
