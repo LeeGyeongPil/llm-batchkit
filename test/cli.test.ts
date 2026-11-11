@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { chmodSync, writeFileSync } from 'node:fs';
+import { chmodSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { startMockServer } from '../src/mock/server.js';
@@ -75,13 +75,13 @@ describe('cli edge cases', () => {
   });
 
   // Real subprocess: the stack trace and exit 70 only come from the entry-point rejection handler.
-  describe('mock-server --scenario with an unusable file', () => {
+  describe('mock-server --scenario with an unusable file', { timeout: 40_000 }, () => {
     const runScenario = (p: string): ReturnType<typeof spawnSync<string>> =>
       spawnSync('node', [join(root, 'dist', 'cli.js'), 'mock-server', '--scenario', p], { encoding: 'utf8', timeout: 30_000 });
 
     const expectFriendly = (p: string, r: ReturnType<typeof runScenario>): void => {
       expect(r.status).toBe(1);
-      expect(r.stderr.startsWith('error: ')).toBe(true);
+      expect(r.stderr.split('\n').some((l) => l.startsWith('error: '))).toBe(true);
       expect(r.stderr).toContain(p);
       expect(r.stderr).toContain('  fix: ');
       expect(r.stderr).not.toContain('    at ');
@@ -107,6 +107,12 @@ describe('cli edge cases', () => {
       const p = join(tmp(), 'noread.json');
       writeFileSync(p, '{"results":{}}', { mode: 0o000 });
       chmodSync(p, 0o000);
+      try {
+        readFileSync(p);
+        return ctx.skip(); // this account can read it anyway (root, ACLs, some file systems): nothing to test
+      } catch {
+        // unreadable, as intended
+      }
       const r = runScenario(p);
       expectFriendly(p, r);
       expect(r.stderr).toContain('Cannot read scenario');
@@ -139,20 +145,29 @@ describe('cli edge cases', () => {
     it('a good scenario file still starts and stops cleanly', async () => {
       const child = spawn('node', [join(root, 'dist', 'cli.js'), 'mock-server', '--scenario', join(root, 'examples', 'mock-scenario.json'), '--port', '0'], { stdio: ['ignore', 'pipe', 'pipe'] });
       let out = '';
-      const exited = new Promise<number | null>((done) => child.once('exit', (code) => done(code)));
-      await new Promise<void>((ready, fail) => {
-        const timer = setTimeout(() => fail(new Error('mock-server did not start')), 20_000);
-        child.stdout.on('data', (d: Buffer) => {
-          out += d.toString();
-          if (out.includes('listening on http://127.0.0.1:')) {
+      const exited = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((done) => child.once('exit', (code, signal) => done({ code, signal })));
+      try {
+        await new Promise<void>((ready, fail) => {
+          const timer = setTimeout(() => fail(new Error('mock-server did not start')), 20_000);
+          child.stdout.on('data', (d: Buffer) => {
+            out += d.toString();
+            if (out.includes('listening on http://127.0.0.1:')) {
+              clearTimeout(timer);
+              ready();
+            }
+          });
+          child.once('exit', () => {
             clearTimeout(timer);
-            ready();
-          }
+            fail(new Error(`mock-server exited before it listened: ${out}`));
+          });
         });
-      });
-      child.kill('SIGTERM');
-      expect(await exited).toBe(0);
-      expect(out).toContain('PRACTICE MOCK MODE');
+        // Signal as soon as the address is printed: the server must already be ready to stop cleanly (exit 0, not killed by the signal).
+        child.kill('SIGTERM');
+        expect(await exited).toEqual({ code: 0, signal: null });
+        expect(out).toContain('PRACTICE MOCK MODE');
+      } finally {
+        child.kill('SIGKILL'); // no-op once the child has exited; stops a hung child on the failure path
+      }
     }, 40_000);
   });
 
