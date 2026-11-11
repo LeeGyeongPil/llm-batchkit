@@ -5,6 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-11
+
+### Fixed
+- `mock-server` now installs its SIGINT/SIGTERM handlers before it prints the `listening on` line. A signal sent the moment the address appeared could kill the process (no exit code) instead of stopping it cleanly with exit 0; this made CI fail on Node 24.
+
 ## [0.1.1] - 2026-11-11
 
 ### Fixed
