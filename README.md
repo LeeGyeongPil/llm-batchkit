@@ -1,5 +1,7 @@
 # llm-batchkit
 
+**한국어** | [English](README.en.md)
+
 > **English summary** — A command-line toolkit for LLM Batch API files: lint a JSONL input before uploading, split it to fit request/byte/token limits, merge the scattered output and error files back by `custom_id`, and write a retry file with only the requests worth retrying. It is for anyone running large OpenAI, Azure OpenAI or Anthropic batch jobs. Install: `git clone` + `npm install` (not published to npm yet); try it without any API key via `npm run demo`.
 
 Batch 작업은 파일 하나를 올리고 최대 24시간 뒤에 결과를 받는 방식이라, 입력 파일의 실수를 늦게 알게 되고 결과도 여러 파일에 흩어져 돌아옵니다. `llm-batchkit` 은 그 앞뒤의 파일 작업(검사 → 분할 → 병합 → 재시도 파일 만들기)을 줄 번호와 요청 ID 단위로 해 주는 CLI 입니다.
