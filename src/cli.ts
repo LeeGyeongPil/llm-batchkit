@@ -226,6 +226,30 @@ async function cmdRetry(argv: string[], io: CliIo, p: Painter): Promise<number> 
   return 0;
 }
 
+/** Read and validate a --scenario file; every failure becomes a BatchkitError that names the file. */
+function loadScenario(path: string): ReturnType<typeof parseScenario> {
+  const example = 'See examples/mock-scenario.json.';
+  let text: string;
+  try {
+    text = readFileSync(path, 'utf8');
+  } catch (e) {
+    throw new BatchkitError('cannot_read_file', `Cannot read scenario ${path}: ${(e as Error).message}`, 'Check the path and permissions, or omit --scenario to use the built-in scenario (same as examples/mock-scenario.json).');
+  }
+  if (text.trim() === '') throw new BatchkitError('invalid_scenario', `Scenario ${path} is empty`, example);
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    throw new BatchkitError('invalid_scenario', `Scenario ${path} is not valid JSON: ${(e as Error).message}`, example);
+  }
+  try {
+    return parseScenario(data);
+  } catch (e) {
+    if (e instanceof BatchkitError) throw new BatchkitError(e.code, `${path}: ${e.message}`, e.hint);
+    throw e;
+  }
+}
+
 async function cmdMockServer(argv: string[], io: CliIo): Promise<number> {
   const { values } = opts(argv, { port: { type: 'string' }, scenario: { type: 'string' } }, false);
   let port = 0;
@@ -233,7 +257,7 @@ async function cmdMockServer(argv: string[], io: CliIo): Promise<number> {
     if (!/^\d+$/.test(values.port) || Number(values.port) > 65535) throw new UsageError(`--port must be an integer from 0 to 65535 (0 picks a free port), got "${values.port}"`);
     port = Number(values.port);
   }
-  const scenario = values.scenario ? parseScenario(JSON.parse(readFileSync(values.scenario, 'utf8'))) : DEFAULT_SCENARIO;
+  const scenario = values.scenario ? loadScenario(values.scenario) : DEFAULT_SCENARIO;
   let server: Awaited<ReturnType<typeof startMockServer>>;
   try {
     server = await startMockServer({ scenario, port });
