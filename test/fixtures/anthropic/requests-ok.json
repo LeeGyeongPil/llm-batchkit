@@ -1,0 +1,9 @@
+{
+  "requests": [
+    {"custom_id": "doc-001", "params": {"model": "claude-haiku-4-5-20251001", "max_tokens": 64, "system": "Summarize in one sentence.", "messages": [{"role": "user", "content": "The library opens at 9 and closes at 6 on weekdays."}]}},
+    {"custom_id": "doc-002", "params": {"model": "claude-haiku-4-5-20251001", "max_tokens": 64, "system": "Summarize in one sentence.", "messages": [{"role": "user", "content": "Rain is expected tomorrow afternoon with light wind."}]}},
+    {"custom_id": "doc-003", "params": {"model": "claude-haiku-4-5-20251001", "max_tokens": 64, "system": "Summarize in one sentence.", "messages": [{"role": "user", "content": "This request is valid here but errored in the fixture results."}]}},
+    {"custom_id": "doc-004", "params": {"model": "claude-sonnet-4-5-20250929", "max_tokens": 64, "messages": [{"role": "user", "content": "Different models may be mixed in one Anthropic batch."}]}},
+    {"custom_id": "doc-005", "params": {"model": "claude-haiku-4-5-20251001", "max_tokens": 64, "messages": [{"role": "user", "content": "This one never shows up in the results file."}]}}
+  ]
+}

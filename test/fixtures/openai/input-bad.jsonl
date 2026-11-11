@@ -1,0 +1,11 @@
+{"custom_id": "a-1", "method": "POST", "url": "/v1/chat/completions", "body": {"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "ok line"}]}}
+{"custom_id": "a-1", "method": "POST", "url": "/v1/chat/completions", "body": {"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "duplicate custom_id"}]}}
+{"method": "POST", "url": "/v1/chat/completions", "body": {"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "missing custom_id"}]}}
+{"custom_id": "a-4", "method": "POST", "url": "/v1/embeddings", "body": {"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "url says embeddings but body is chat"}]}}
+{"custom_id": "a-5", "method": "POST", "url": "/v1/chat/completions", "body": {"model": "gpt-4.1-mini", "messages": [{"role": "user", "content": "second model in the same file"}]}}
+{"custom_id": "a-6", "method": "POST", "url": "/v1/chat/completions", "body": {"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "trailing comma"}],}}
+{"custom_id": "a-7", "method": "GET", "url": "/v1/chat/completions", "body": {"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "method must be POST"}]}}
+
+{"custom_id": "a-9", "method": "POST", "url": "https://api.openai.com/v1/chat/completions", "body": {"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "url must be a path, not a full URL"}]}}
+{"custom_id": "a-10", "method": "POST", "url": "/v1/chat/completions", "body": {"messages": [{"role": "user", "content": "body missing model"}]}}
+{"custom_id": "a-11", "method": "POST", "url": "/v1/chat/completions", "body": {"model": "gpt-4o-mini", "stream": true, "messages": [{"role": "user", "content": "stream is not allowed in batch"}]}}

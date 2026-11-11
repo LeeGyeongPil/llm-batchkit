@@ -1,0 +1,5 @@
+{"custom_id": "doc-002", "result": {"type": "succeeded", "message": {"id": "msg_0002", "type": "message", "role": "assistant", "model": "claude-haiku-4-5-20251001", "content": [{"type": "text", "text": "Light rain and wind are expected tomorrow afternoon."}], "stop_reason": "end_turn", "stop_sequence": null, "usage": {"input_tokens": 24, "output_tokens": 12}}}}
+{"custom_id": "doc-001", "result": {"type": "succeeded", "message": {"id": "msg_0001", "type": "message", "role": "assistant", "model": "claude-haiku-4-5-20251001", "content": [{"type": "text", "text": "The library is open 9 to 6 on weekdays."}], "stop_reason": "end_turn", "stop_sequence": null, "usage": {"input_tokens": 25, "output_tokens": 13}}}}
+{"custom_id": "doc-003", "result": {"type": "errored", "error": {"type": "error", "error": {"type": "invalid_request_error", "message": "max_tokens: must be greater than or equal to 1"}}}}
+{"custom_id": "doc-004", "result": {"type": "expired"}}
+{"custom_id": "doc-006", "result": {"type": "canceled"}}

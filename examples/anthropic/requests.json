@@ -1,0 +1,9 @@
+{
+  "requests": [
+    {"custom_id": "doc-001", "params": {"model": "claude-haiku-4-5-20251001", "max_tokens": 64, "system": "Summarize in one sentence.", "messages": [{"role": "user", "content": "The library opens at 9 and closes at 6 on weekdays."}]}},
+    {"custom_id": "doc-002", "params": {"model": "claude-haiku-4-5-20251001", "max_tokens": 64, "system": "Summarize in one sentence.", "messages": [{"role": "user", "content": "Rain is expected tomorrow afternoon with light wind."}]}},
+    {"custom_id": "doc-003", "params": {"model": "claude-haiku-4-5-20251001", "max_tokens": 0, "system": "Summarize in one sentence.", "messages": [{"role": "user", "content": "max_tokens 0 is not allowed inside a batch."}]}},
+    {"custom_id": "doc-004", "params": {"model": "claude-sonnet-4-5-20250929", "max_tokens": 64, "messages": [{"role": "user", "content": "Different models may be mixed in one Anthropic batch."}]}},
+    {"custom_id": "doc.005", "params": {"model": "claude-haiku-4-5-20251001", "max_tokens": 64, "stream": true, "messages": [{"role": "user", "content": "custom_id with a dot breaks the pattern and stream is not allowed."}]}}
+  ]
+}
