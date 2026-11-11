@@ -15,10 +15,10 @@ A command-line toolkit for LLM Batch API files: lint a JSONL input before upload
 ## Installation
 It is not published to npm yet. Download the repository and build it. Node.js 22.12 or later is required.
 ```bash
-# Node.js 가 없다면(macOS): brew install node
+# If you do not have Node.js (macOS): brew install node
 git clone https://github.com/LeeGyeongPil/llm-batchkit
 cd llm-batchkit
-npm install          # 설치 후 자동으로 빌드(dist/)까지 합니다
+npm install          # also builds dist/ automatically after install
 node dist/cli.js --help
 ```
 (Comments: "If you do not have Node.js (macOS): brew install node" and "after installation it also builds (dist/) automatically".)
@@ -241,7 +241,7 @@ An example line of `results.jsonl` (shortened for readability).
 | `text`, `response` | Only on success. The response body and the text inside it |
 
 ## Practice mock server
-`mock-server` is a **practice** server that lets you try the whole process without keys, and binds only to 127.0.0.1. It actually runs `lint` on the uploaded body and makes the batch `failed` if there are errors. `--port 0` picks a free port, an invalid value ends with exit code 64, and a port already in use ends with an error that includes a fix.
+`mock-server` is a **practice** server that lets you try the whole process without keys, and binds only to 127.0.0.1. It actually runs `lint` on the uploaded body and makes the batch `failed` if there are errors. `--port 0` picks a free port, an invalid value ends with exit code 64, and a port already in use ends with an error that includes a fix. A `--scenario` file that cannot be read, is not JSON or has the wrong shape also ends with an error that names the file and includes a fix (exit code 1, no stack trace).
 
 The `--scenario` file gives, for each `custom_id`, a list of per-round results. The first value is the first submission, and the second is the result of `retry-1`. The round state is kept while the server is running. Running a scenario twice on the same server gives different results, so to see the same results as this README, start the server fresh and run it only once (if the port is in use, `--port 0`).
 ```json
@@ -288,10 +288,9 @@ npm install /path/to/llm-batchkit
 
 ## Development and contributing
 ```bash
-npm test        # 빌드 후 vitest (8 파일, 76 테스트)
-npm run demo    # 키 없이 전체 과정 연습
+npm test        # build, then vitest (8 files, 83 tests)
+npm run demo    # practice the whole process without keys
 ```
-(Comments: "build, then vitest (8 files, 76 tests)" and "practice the whole process without keys".)
 
 Please leave bugs and suggestions as issues. The change log is [CHANGELOG.md](CHANGELOG.md).
 

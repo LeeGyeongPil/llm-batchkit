@@ -5,6 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-11
+
+### Fixed
+- `mock-server --scenario` with a missing, unreadable, empty, non-JSON or wrongly shaped file now exits 1 with `error:` and `fix:` lines that name the file, instead of a stack trace and exit code 70.
+
 ## [0.1.0] - 2026-11-11
 
 ### Added
