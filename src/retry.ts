@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { BatchkitError } from './errors.js';
+import { fail } from './errors.js';
 import { detectProvider, loadRequests } from './jsonl.js';
 import { readManifest } from './manifest.js';
 import type { ResultRow } from './merge.js';
@@ -34,7 +34,7 @@ export function selectRetries(rows: ResultRow[], opts: RetryOptions = {}): Retry
   if (only) {
     for (const s of only) {
       if (!(RETRY_STATUSES as readonly string[]).includes(s)) {
-        throw new BatchkitError('invalid_option', `--only: unknown status "${s}"`, `Use a comma-separated subset of: ${RETRY_STATUSES.join(', ')}.`);
+        throw fail('invalid_option', 'err.retry_only', { status: s, list: RETRY_STATUSES.join(', ') }, 'err.retry_only.hint');
       }
     }
   }
@@ -70,7 +70,7 @@ export function buildOriginalIndex(source: { manifestPath?: string; inputPath?: 
     files.push(source.inputPath);
   }
   for (const f of files) {
-    if (!existsSync(f)) throw new BatchkitError('original_not_found', `Original request file not found: ${f}`, 'Keep the shard files next to manifest.json or pass --input <original file>.');
+    if (!existsSync(f)) throw fail('original_not_found', 'err.original_file', { path: f }, 'err.original_file.hint');
     const text = readFileSync(f, 'utf8');
     if (source.inputPath && !source.manifestPath) {
       provider = detectProvider(text);
@@ -89,7 +89,7 @@ export function buildOriginalIndex(source: { manifestPath?: string; inputPath?: 
 export function writeRetryFile(selected: ResultRow[], original: Map<string, OriginalRequest>, provider: ProviderName, outDir: string): string {
   const missing = selected.filter((r) => !original.has(r.custom_id)).map((r) => r.custom_id);
   if (missing.length > 0) {
-    throw new BatchkitError('original_not_found', `Original request not found for: ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? ' ...' : ''}`, 'Pass --manifest or --input pointing at the files the results came from.');
+    throw fail('original_not_found', 'err.original_requests', { ids: `${missing.slice(0, 5).join(', ')}${missing.length > 5 ? ' ...' : ''}` }, 'err.original_requests.hint');
   }
   mkdirSync(outDir, { recursive: true });
   if (provider === 'anthropic') {

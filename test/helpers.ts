@@ -19,10 +19,11 @@ afterAll(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
-export async function cli(args: string[]): Promise<{ code: number; out: string; err: string }> {
+/** Run the CLI in-process. Pass `env` to choose the language by environment (default: the English pinned by test/setup.ts). */
+export async function cli(args: string[], env?: NodeJS.ProcessEnv): Promise<{ code: number; out: string; err: string }> {
   let out = '';
   let err = '';
-  const code = await runCli(args, { out: (s) => (out += s), err: (s) => (err += s), color: false });
+  const code = await runCli(args, { out: (s) => (out += s), err: (s) => (err += s), color: false, ...(env ? { env } : {}) });
   return { code, out, err };
 }
 

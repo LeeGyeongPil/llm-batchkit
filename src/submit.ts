@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { BatchkitError } from './errors.js';
+import { fail } from './errors.js';
+import type { Msg } from './i18n.js';
 import { ownsRequests, readBatchesState, readManifest, writeJsonAtomic, type BatchesState, type Manifest, type ShardBatchState } from './manifest.js';
 import { OpenAIBatchClient, resolveConnection } from './openai-batch.js';
 
@@ -16,13 +17,13 @@ export interface ConnectionOptions {
 
 function openState(manifestPath: string, manifest: Manifest, opts: ConnectionOptions): { client: OpenAIBatchClient; state: BatchesState; statePath: string } {
   if (manifest.provider !== 'openai') {
-    throw new BatchkitError('unsupported_provider', `submit/collect support OpenAI-compatible endpoints only (manifest provider: ${manifest.provider})`, 'Azure and Anthropic submission is planned; for now upload the shard files with the vendor tooling and use merge/retry afterwards.');
+    throw fail('unsupported_provider', 'err.unsupported_provider', { provider: manifest.provider }, 'err.unsupported_provider.hint');
   }
   const statePath = join(dirname(manifestPath), 'batches.json');
   const existing = readBatchesState(statePath);
   const conn = opts.client ? { baseUrl: opts.baseUrl ?? existing?.base_url ?? '', apiKey: '' } : resolveConnection({ baseUrl: opts.baseUrl ?? existing?.base_url });
   if (existing && opts.baseUrl && existing.base_url !== opts.baseUrl) {
-    throw new BatchkitError('base_url_changed', `batches.json belongs to ${existing.base_url}, not ${opts.baseUrl}`, 'Use the same --base-url, or move batches.json away to start a new submission (shards would be uploaded again).');
+    throw fail('base_url_changed', 'err.base_url_changed', { existing: existing.base_url, requested: opts.baseUrl }, 'err.base_url_changed.hint');
   }
   const client = opts.client ?? new OpenAIBatchClient(conn);
   const state: BatchesState = existing ?? { version: 1, base_url: conn.baseUrl, shards: {}, held: [] };
@@ -66,8 +67,8 @@ type Decision =
  */
 function decide(manifest: Manifest, state: BatchesState, dir: string, manifestSha: string, opts: SubmitOptions): Map<string, Decision> {
   const decisions = new Map<string, Decision>();
-  const running: string[] = []; // changed while the provider is still working on it: never replaced
-  const finished: string[] = []; // changed after results came back: replaced only with --resubmit-changed
+  const running: Msg[] = []; // changed while the provider is still working on it: never replaced
+  const finished: Msg[] = []; // changed after results came back: replaced only with --resubmit-changed
 
   for (const shard of manifest.shards) {
     const prev = state.shards[shard.file];
@@ -85,9 +86,9 @@ function decide(manifest: Manifest, state: BatchesState, dir: string, manifestSh
     if (!changed) {
       decisions.set(shard.file, { kind: 'skip' });
     } else if (!TERMINAL.has(prev.status)) {
-      running.push(`${shard.file} changed while ${prev.batch_id} is still ${prev.status}`);
+      running.push({ key: 'err.changed_running', params: { file: shard.file, id: prev.batch_id, status: prev.status } });
     } else if (!opts.resubmitChanged) {
-      finished.push(`${shard.file} changed after ${prev.batch_id} ${prev.status}`);
+      finished.push({ key: 'err.changed_finished', params: { file: shard.file, id: prev.batch_id, status: prev.status } });
     } else {
       decisions.set(shard.file, { kind: 'replace', reason: `changed after ${prev.status} ${prev.batch_id}` });
     }
@@ -96,23 +97,17 @@ function decide(manifest: Manifest, state: BatchesState, dir: string, manifestSh
   // ③ Batches the manifest no longer mentions (the folder was split again): their requests may now sit in other shards.
   const inManifest = new Set(manifest.shards.map((s) => s.file));
   for (const [file, s] of Object.entries(state.shards)) {
-    if (!inManifest.has(file) && ownsRequests(s)) running.push(`batches.json has ${s.batch_id} (${s.status}) for ${file}, which is no longer in the manifest`);
+    if (!inManifest.has(file) && ownsRequests(s)) running.push({ key: 'err.not_in_manifest', params: { id: s.batch_id ?? '?', status: s.status, file } });
   }
   // ④ The manifest itself changed (re-split, hand edit) while batches own requests: shards may now overlap them.
   const owners = Object.values(state.shards).filter(ownsRequests);
   if (owners.length > 0 && state.manifest_sha256 !== undefined && state.manifest_sha256 !== manifestSha && !opts.resubmitChanged) {
-    finished.push(`manifest.json changed since ${owners.length} batch(es) were created`);
+    finished.push({ key: 'err.manifest_changed', params: { n: owners.length } });
   }
 
   if (running.length > 0 || finished.length > 0) {
     const problems = [...running, ...finished];
-    throw new BatchkitError(
-      'shard_changed',
-      `refusing to submit - nothing was uploaded:\n${problems.map((p) => `  ${p}`).join('\n')}`,
-      running.length > 0
-        ? 'A running batch (or one the manifest lost) is never sent twice. Restore the shard file, or put the edited requests into a new folder (`split ... --out run2`); `collect` the running batch first, or cancel it at the provider.'
-        : 'Its results are already there. Restore the shard file, or split the edited input into a new folder. To send it again on purpose (the requests are billed again) pass --resubmit-changed.',
-    );
+    throw fail('shard_changed', 'err.shard_changed', { problems }, running.length > 0 ? 'err.shard_changed.runningHint' : 'err.shard_changed.finishedHint');
   }
   return decisions;
 }
@@ -144,7 +139,7 @@ export async function submit(manifestPath: string, opts: SubmitOptions = {}): Pr
 
   const tooBig = budget === undefined ? undefined : manifest.shards.find((s) => s.est_tokens > budget);
   if (tooBig) {
-    throw new BatchkitError('shard_exceeds_budget', `${tooBig.file} has ~${tooBig.est_tokens} estimated tokens, more than --max-enqueued-tokens ${budget}`, 'Split again with a smaller --max-tokens so every shard fits the budget.');
+    throw fail('shard_exceeds_budget', 'err.shard_exceeds_budget', { file: tooBig.file, tokens: tooBig.est_tokens, budget: budget as number }, 'err.shard_exceeds_budget.hint');
   }
 
   // Tokens still queued on the provider side = shards whose batch is not finished (refresh with `collect`).
@@ -242,7 +237,7 @@ export async function collect(manifestPath: string, opts: CollectOptions = {}): 
   const dir = dirname(manifestPath);
   const { client, state, statePath } = openState(manifestPath, manifest, opts);
   if (Object.keys(state.shards).length === 0) {
-    throw new BatchkitError('nothing_submitted', 'batches.json has no submitted shards', 'Run `llm-batchkit submit <manifest>` first.');
+    throw fail('nothing_submitted', 'err.nothing_submitted', {}, 'err.nothing_submitted.hint');
   }
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
 

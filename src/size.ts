@@ -1,4 +1,4 @@
-import { BatchkitError } from './errors.js';
+import { fail } from './errors.js';
 
 const UNITS: Record<string, number> = {
   '': 1,
@@ -18,17 +18,17 @@ const UNITS: Record<string, number> = {
 export function parseSize(input: string | number): number {
   if (typeof input === 'number') {
     if (!Number.isFinite(input) || input <= 0) {
-      throw new BatchkitError('invalid_size', `Invalid size: ${input}`, 'Use a positive number of bytes, e.g. 1200, 256MB or 200MiB.');
+      throw fail('invalid_size', 'err.size_number', { value: String(input) }, 'err.size_number.hint');
     }
     return Math.floor(input);
   }
   const match = /^\s*(\d+(?:\.\d+)?)\s*([a-zA-Z]*)\s*$/.exec(input);
   const factor = match ? UNITS[(match[2] ?? '').toLowerCase()] : undefined;
   if (!match || factor === undefined) {
-    throw new BatchkitError('invalid_size', `Invalid size: "${input}"`, 'Use a number of bytes with an optional unit: 1200, 256MB, 200MiB.');
+    throw fail('invalid_size', 'err.size_text', { value: input }, 'err.size_text.hint');
   }
   const bytes = Math.floor(Number(match[1]) * factor);
-  if (bytes <= 0) throw new BatchkitError('invalid_size', `Size must be positive: "${input}"`, 'Use a positive size.');
+  if (bytes <= 0) throw fail('invalid_size', 'err.size_positive', { value: input }, 'err.size_positive.hint');
   return bytes;
 }
 
@@ -36,7 +36,7 @@ export function parseSize(input: string | number): number {
 export function parsePositiveInt(name: string, input: string | undefined): number | undefined {
   if (input === undefined) return undefined;
   if (!/^\d+$/.test(input) || Number(input) < 1) {
-    throw new BatchkitError('invalid_option', `${name} must be a positive integer, got "${input}"`, `Example: ${name} 1000`);
+    throw fail('invalid_option', 'err.int_option', { name, value: input }, 'err.int_option.hint');
   }
   return Number(input);
 }

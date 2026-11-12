@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { BatchkitError } from './errors.js';
+import { fail } from './errors.js';
 import type { Limits } from './providers.js';
 import type { ProviderName } from './types.js';
 
@@ -80,10 +80,10 @@ export function readManifest(path: string): Manifest {
   try {
     parsed = JSON.parse(readFileSync(path, 'utf8'));
   } catch (e) {
-    throw new BatchkitError('invalid_manifest', `Cannot read manifest ${path}: ${(e as Error).message}`, 'Pass the manifest.json written by `llm-batchkit split`.');
+    throw fail('invalid_manifest', 'err.manifest_read', { path, detail: (e as Error).message }, 'err.manifest_read.hint');
   }
   if (parsed?.version !== 1 || !Array.isArray(parsed.order) || !Array.isArray(parsed.shards)) {
-    throw new BatchkitError('invalid_manifest', `${path} is not a llm-batchkit manifest (version 1)`, 'Re-run `llm-batchkit split` to create one.');
+    throw fail('invalid_manifest', 'err.manifest_bad', { path }, 'err.manifest_bad.hint');
   }
   return parsed as Manifest;
 }
@@ -93,6 +93,6 @@ export function readBatchesState(path: string): BatchesState | null {
     return JSON.parse(readFileSync(path, 'utf8')) as BatchesState;
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null;
-    throw new BatchkitError('invalid_state', `Cannot read ${path}: ${(e as Error).message}`, 'Fix or delete batches.json (already uploaded shards would be uploaded again).');
+    throw fail('invalid_state', 'err.cannot_read', { path, detail: (e as Error).message }, 'err.state_read.hint');
   }
 }

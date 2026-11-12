@@ -1,4 +1,5 @@
-import { BatchkitError } from './errors.js';
+import { BatchkitError, fail } from './errors.js';
+import type { Msg } from './i18n.js';
 
 export const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
 
@@ -43,23 +44,23 @@ export class OpenAIBatchClient {
       headers['content-type'] = 'application/json';
       body = JSON.stringify(init.json);
     }
-    let lastError = '';
+    let last: Msg = { key: 'err.http_failed' };
     for (let attempt = 1; attempt <= this.attempts; attempt++) {
       try {
         const res = await fetch(`${this.base}${path}`, { method, headers, ...(body !== undefined ? { body } : {}) });
         if (res.ok) return res;
         const detail = (await res.text()).slice(0, 300);
-        lastError = `${method} ${path} -> HTTP ${res.status} ${detail}`;
+        last = { key: 'err.http_status', params: { method, path, status: res.status, detail } };
         if (res.status !== 429 && res.status < 500) {
-          throw new BatchkitError('http_error', lastError, res.status === 401 ? 'Check OPENAI_API_KEY.' : 'Check the request; this status is not retried.');
+          throw fail('http_error', last.key, last.params, res.status === 401 ? 'err.http_401.hint' : 'err.http_other.hint');
         }
       } catch (e) {
         if (e instanceof BatchkitError) throw e;
-        lastError = `${method} ${path} failed: ${(e as Error).message}`;
+        last = { key: 'err.http_failed', params: { method, path, detail: (e as Error).message } };
       }
       if (attempt < this.attempts) await new Promise((r) => setTimeout(r, this.backoffMs * 2 ** (attempt - 1)));
     }
-    throw new BatchkitError('http_error', `${lastError} (after ${this.attempts} attempts)`, 'Run the command again; progress is kept in batches.json.');
+    throw fail('http_error', 'err.http_after', { last, attempts: this.attempts }, 'err.http_retry.hint');
   }
 
   async uploadFile(filename: string, content: string): Promise<{ id: string }> {
@@ -96,7 +97,7 @@ export function resolveConnection(opts: { baseUrl?: string | undefined }, env: N
   const baseUrl = opts.baseUrl ?? (env.OPENAI_BASE_URL || DEFAULT_BASE_URL);
   const apiKey = env.OPENAI_API_KEY || (isLocalUrl(baseUrl) ? 'mock-key-not-real' : ''); // gitleaks:allow (placeholder for the local mock)
   if (!apiKey) {
-    throw new BatchkitError('missing_api_key', 'OPENAI_API_KEY is not set', 'Export OPENAI_API_KEY, or try the keyless practice flow: `npm run demo` (uses a local mock server).');
+    throw fail('missing_api_key', 'err.missing_api_key', {}, 'err.missing_api_key.hint');
   }
   return { baseUrl, apiKey };
 }

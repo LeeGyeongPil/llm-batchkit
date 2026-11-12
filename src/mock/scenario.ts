@@ -1,4 +1,4 @@
-import { BatchkitError } from '../errors.js';
+import { fail } from '../errors.js';
 
 /**
  * What the practice mock server does with a request on its Nth submission:
@@ -33,12 +33,12 @@ export const DEFAULT_SCENARIO: Scenario = {
 export function parseScenario(value: unknown): Scenario {
   const v = value as { results?: Record<string, unknown>; pollsBeforeDone?: unknown } | null;
   if (!v || typeof v !== 'object' || !v.results || typeof v.results !== 'object') {
-    throw new BatchkitError('invalid_scenario', 'Scenario must be {"results": {"<custom_id>": ["ok", ...]}}', 'See examples/mock-scenario.json.');
+    throw fail('invalid_scenario', 'err.scenario_shape', {}, 'err.scenario_shape.hint');
   }
   const results: Record<string, Outcome[]> = {};
   for (const [id, list] of Object.entries(v.results)) {
     if (!Array.isArray(list) || list.length === 0 || !list.every((o) => OUTCOMES.includes(o as Outcome))) {
-      throw new BatchkitError('invalid_scenario', `Scenario entry "${id}" must be a non-empty list of: ${OUTCOMES.join(', ')}`, 'Fix examples/mock-scenario.json style entries.');
+      throw fail('invalid_scenario', 'err.scenario_entry', { id, list: OUTCOMES.join(', ') }, 'err.scenario_entry.hint');
     }
     results[id] = list as Outcome[];
   }

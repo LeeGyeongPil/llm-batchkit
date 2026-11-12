@@ -1,3 +1,4 @@
+import { makeIssue } from './i18n.js';
 import type { Issue, ParsedRequest, ProviderName } from './types.js';
 
 export interface LoadedRequests {
@@ -64,7 +65,7 @@ export function loadRequests(text: string, provider: ProviderName): LoadedReques
   if (doc) {
     doc.forEach((value, i) => {
       if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-        issues.push({ line: i + 1, code: 'invalid_json_line', severity: 'error', message: 'request is not a JSON object' });
+        issues.push(makeIssue(i + 1, 'invalid_json_line', 'error', 'lint.request_not_object'));
         return;
       }
       requests.push(toParsed(i + 1, JSON.stringify(value), value, provider));
@@ -75,18 +76,18 @@ export function loadRequests(text: string, provider: ProviderName): LoadedReques
   splitLines(text).forEach((raw, i) => {
     const line = i + 1;
     if (raw.trim() === '') {
-      issues.push({ line, code: 'empty_line', severity: 'warn', message: 'blank line (dropped by split)' });
+      issues.push(makeIssue(line, 'empty_line', 'warn', 'lint.empty_line'));
       return;
     }
     let value: any;
     try {
       value = JSON.parse(raw);
     } catch (e) {
-      issues.push({ line, code: 'invalid_json_line', severity: 'error', message: (e as Error).message });
+      issues.push(makeIssue(line, 'invalid_json_line', 'error', 'lint.json_detail', { detail: (e as Error).message })); // Node's own parse error text stays as is
       return;
     }
     if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-      issues.push({ line, code: 'invalid_json_line', severity: 'error', message: 'line is not a JSON object' });
+      issues.push(makeIssue(line, 'invalid_json_line', 'error', 'lint.line_not_object'));
       return;
     }
     requests.push(toParsed(line, raw, value, provider));

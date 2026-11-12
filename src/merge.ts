@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative } from 'node:path';
-import { BatchkitError } from './errors.js';
+import { fail } from './errors.js';
 import { classifyLine, type Classified, type Status } from './classify.js';
 import { readManifest, type Manifest } from './manifest.js';
 
@@ -79,13 +79,13 @@ export function mergeResults(manifestPath: string, opts: MergeOptions = {}): Mer
   let files: ResultFile[];
   if (opts.files && opts.files.length > 0) {
     files = opts.files.map((p, i) => {
-      if (!existsSync(p)) throw new BatchkitError('cannot_read_file', `Result file not found: ${p}`, 'Run `llm-batchkit collect` first or check the path.');
+      if (!existsSync(p)) throw fail('cannot_read_file', 'err.result_missing', { path: p }, 'err.result_missing.hint');
       return { path: p, label: basename(p), round: i };
     });
   } else {
     files = discoverResultFiles(manifestPath);
     if (files.length === 0) {
-      throw new BatchkitError('no_result_files', `No *.output.jsonl / *.error.jsonl files next to ${manifestPath}`, 'Run `llm-batchkit collect` first, or pass the result files explicitly.');
+      throw fail('no_result_files', 'err.no_result_files', { path: manifestPath }, 'err.no_result_files.hint');
     }
   }
 
@@ -182,7 +182,7 @@ export function readResultsFile(path: string): ResultRow[] {
   try {
     text = readFileSync(path, 'utf8');
   } catch (e) {
-    throw new BatchkitError('cannot_read_file', `Cannot read ${path}: ${(e as Error).message}`, 'Pass the results.jsonl written by `llm-batchkit merge`.');
+    throw fail('cannot_read_file', 'err.cannot_read', { path, detail: (e as Error).message }, 'err.results_read.hint');
   }
   const rows: ResultRow[] = [];
   text.split('\n').forEach((raw, i) => {
@@ -192,7 +192,7 @@ export function readResultsFile(path: string): ResultRow[] {
       if (typeof row.custom_id !== 'string' || typeof row.status !== 'string') throw new Error('missing custom_id/status');
       rows.push(row as ResultRow);
     } catch (e) {
-      throw new BatchkitError('invalid_results', `${path} line ${i + 1} is not a merge result row: ${(e as Error).message}`, 'Re-create it with `llm-batchkit merge`.');
+      throw fail('invalid_results', 'err.invalid_results', { path, line: i + 1, detail: (e as Error).message }, 'err.invalid_results.hint');
     }
   });
   return rows;

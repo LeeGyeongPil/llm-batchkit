@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { BatchkitError } from './errors.js';
+import { fail } from './errors.js';
+import { makeIssue, type Params } from './i18n.js';
 import { detectProvider, loadRequests } from './jsonl.js';
 import { PRESETS, resolveLimits, type Limits } from './providers.js';
 import { estimateTokens } from './tokens.js';
@@ -43,7 +44,7 @@ const ENDPOINT_BODY: Record<string, (body: any) => boolean> = {
 function resolveProvider(requested: LintOptions['provider'], text: string): ProviderName {
   if (requested === undefined || requested === 'auto') return detectProvider(text);
   if (!(requested in PRESETS)) {
-    throw new BatchkitError('invalid_provider', `Unknown provider "${requested}"`, 'Use one of: auto, openai, azure, anthropic.');
+    throw fail('invalid_provider', 'err.invalid_provider', { value: String(requested) }, 'err.invalid_provider.hint');
   }
   return requested;
 }
@@ -55,8 +56,9 @@ export function lintText(text: string, opts: LintOptions = {}): LintReport {
   const limits = resolveLimits(preset, opts);
   const loaded = loadRequests(text, provider);
   const issues: Issue[] = [...loaded.issues];
-  const add = (line: number, code: string, message: string, severity: Issue['severity'] = 'error'): void => {
-    issues.push({ line, code, severity, message });
+  // Each issue gets an English message (used by --json and the library) plus a message-table key for the text report.
+  const add = (line: number, code: string, key: string, params: Params = {}, severity: Issue['severity'] = 'error'): void => {
+    issues.push(makeIssue(line, code, severity, key, params));
   };
 
   const seen = new Map<string, number>();
@@ -72,69 +74,69 @@ export function lintText(text: string, opts: LintOptions = {}): LintReport {
     // custom_id: the only link between a request and its (unordered) result.
     if (preset.customIdPattern) {
       if (typeof value.custom_id !== 'string' || !preset.customIdPattern.test(value.custom_id)) {
-        add(line, 'invalid_custom_id', `custom_id ${JSON.stringify(value.custom_id)} must match ${preset.customIdPattern}`);
+        add(line, 'invalid_custom_id', 'lint.invalid_custom_id', { value: JSON.stringify(value.custom_id) ?? 'undefined', pattern: String(preset.customIdPattern) });
       }
     } else if (req.customId === null) {
-      add(line, 'missing_custom_id', 'custom_id must be a non-empty string');
+      add(line, 'missing_custom_id', 'lint.missing_custom_id');
     }
     if (req.customId !== null) {
       const first = seen.get(req.customId);
-      if (first !== undefined) add(line, 'duplicate_custom_id', `same as line ${first}`);
+      if (first !== undefined) add(line, 'duplicate_custom_id', 'lint.duplicate_custom_id', { first });
       else seen.set(req.customId, line);
     }
 
     if (provider === 'anthropic') {
       if (value.params === null || typeof value.params !== 'object') {
-        add(line, 'missing_params', 'params object is required');
+        add(line, 'missing_params', 'lint.missing_params');
         continue;
       }
       if (!(typeof value.params.max_tokens === 'number' && value.params.max_tokens >= 1)) {
-        add(line, 'max_tokens_min', 'params.max_tokens must be >= 1 in a batch');
+        add(line, 'max_tokens_min', 'lint.max_tokens_min');
       }
-      if (value.params.stream === true) add(line, 'stream_not_allowed', 'streaming is not supported in a batch');
-      if (req.model === null) add(line, 'missing_model', 'params.model is required');
+      if (value.params.stream === true) add(line, 'stream_not_allowed', 'lint.stream_anthropic');
+      if (req.model === null) add(line, 'missing_model', 'lint.missing_model_anthropic');
       else models.set(req.model, (models.get(req.model) ?? 0) + 1);
       continue;
     }
 
     // OpenAI / Azure line format
-    if (value.method !== 'POST') add(line, 'invalid_method', `method must be "POST", got ${JSON.stringify(value.method)}`);
+    if (value.method !== 'POST') add(line, 'invalid_method', 'lint.invalid_method', { value: JSON.stringify(value.method) ?? 'undefined' });
     if (req.url === null || !req.url.startsWith('/')) {
-      add(line, 'invalid_url', 'url must be a path such as /v1/chat/completions, not a full URL');
+      add(line, 'invalid_url', 'lint.invalid_url');
     } else {
       urls.set(req.url, (urls.get(req.url) ?? 0) + 1);
       const check = ENDPOINT_BODY[req.url];
-      if (check && !check(value.body)) add(line, 'url_body_mismatch', `body does not look like a ${req.url} request`);
+      if (check && !check(value.body)) add(line, 'url_body_mismatch', 'lint.url_body_mismatch', { url: req.url });
       if (req.url === '/v1/embeddings') {
         embeddingInputs += Array.isArray(value.body?.input) ? value.body.input.length : 1;
       }
     }
-    if (req.model === null) add(line, 'missing_model', 'body.model is required');
+    if (req.model === null) add(line, 'missing_model', 'lint.missing_model_openai');
     else models.set(req.model, (models.get(req.model) ?? 0) + 1);
-    if (value.body?.stream === true) add(line, 'stream_not_allowed', 'stream must not be true in a batch');
+    if (value.body?.stream === true) add(line, 'stream_not_allowed', 'lint.stream_openai');
   }
 
   // File-level rules (line 0).
   if (loaded.requests.length === 0) {
-    add(0, 'empty_file', 'no requests found (a provider rejects an empty file)');
+    add(0, 'empty_file', 'lint.empty_file');
   }
   if (preset.singleModel && models.size > 1) {
-    const what = provider === 'azure' ? 'deployment names' : 'models';
-    add(0, 'model_mismatch', `${what} in one file: ${[...models.keys()].join(', ')} (split by model first)`);
+    const what = { key: provider === 'azure' ? 'lint.what.deployments' : 'lint.what.models' };
+    add(0, 'model_mismatch', 'lint.model_mismatch', { what, list: [...models.keys()].join(', ') });
   }
   if (preset.singleUrl && urls.size > 1) {
-    add(0, 'url_mismatch', `endpoints in one file: ${[...urls.keys()].join(', ')} (one endpoint per batch)`);
+    add(0, 'url_mismatch', 'lint.url_mismatch', { list: [...urls.keys()].join(', ') });
   }
   const bytes = Buffer.byteLength(text);
   if (loaded.requests.length > limits.maxRequests) {
-    add(0, 'too_many_requests', `${loaded.requests.length} requests > limit ${limits.maxRequests}`);
+    add(0, 'too_many_requests', 'lint.too_many_requests', { n: loaded.requests.length, limit: limits.maxRequests });
   }
-  if (bytes > limits.maxBytes) add(0, 'file_too_large', `${bytes} bytes > limit ${limits.maxBytes}`);
+  if (bytes > limits.maxBytes) add(0, 'file_too_large', 'lint.file_too_large', { n: bytes, limit: limits.maxBytes });
   if (preset.maxEmbeddingInputs !== null && embeddingInputs > preset.maxEmbeddingInputs) {
-    add(0, 'too_many_embedding_inputs', `${embeddingInputs} embedding inputs > limit ${preset.maxEmbeddingInputs}`);
+    add(0, 'too_many_embedding_inputs', 'lint.too_many_embedding_inputs', { n: embeddingInputs, limit: preset.maxEmbeddingInputs });
   }
   if (limits.maxTokens !== null && estTokens > limits.maxTokens) {
-    add(0, 'too_many_tokens', `~${estTokens} estimated tokens > limit ${limits.maxTokens}`);
+    add(0, 'too_many_tokens', 'lint.too_many_tokens', { n: estTokens, limit: limits.maxTokens });
   }
 
   // Line-level issues first (by line), file-level issues last.
@@ -161,7 +163,7 @@ export function readInputFile(path: string): string {
   try {
     return readFileSync(path, 'utf8');
   } catch (e) {
-    throw new BatchkitError('cannot_read_file', `Cannot read ${path}: ${(e as Error).message}`, 'Check the path and permissions.');
+    throw fail('cannot_read_file', 'err.cannot_read', { path, detail: (e as Error).message }, 'err.cannot_read.hint');
   }
 }
 

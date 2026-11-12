@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { BatchkitError } from './errors.js';
+import { fail } from './errors.js';
+import { issueMsg, type Msg } from './i18n.js';
 import { detectProvider, loadRequests } from './jsonl.js';
 import { lintText, readInputFile } from './lint.js';
 import { ownsRequests, readBatchesState, writeJsonAtomic, type Manifest, type ShardInfo } from './manifest.js';
@@ -59,11 +60,7 @@ function refuseIfBatchesOwnRequests(out: string, used: string[]): void {
     if (ownsRequests(s)) owners.push(`${file} ${s.batch_id} ${s.status}`);
   }
   if (owners.length > 0) {
-    throw new BatchkitError(
-      'out_dir_has_batches',
-      `${out} has running or finished batches (${owners.join(', ')}); --force would submit their requests twice`,
-      'Split into a new folder (for example run2) - each folder is one submission, and merge/retry work per folder. --force only re-splits a folder whose batches all failed validation.',
-    );
+    throw fail('out_dir_has_batches', 'err.out_dir_has_batches', { out, owners: owners.join(', ') }, 'err.out_dir_has_batches.hint');
   }
 }
 
@@ -84,29 +81,25 @@ export function splitFile(inputPath: string, opts: SplitOptions): SplitResult {
     const lineErrors = report.issues.filter((i) => i.severity === 'error' && i.line > 0);
     if (lineErrors.length > 0) {
       const first = lineErrors[0]!;
-      throw new BatchkitError(
-        'lint_failed',
-        `${lineErrors.length} line-level error(s); first: line ${first.line} ${first.code} (${first.message})`,
-        'Fix them (see `llm-batchkit lint`), or pass --skip-lint to split anyway.',
-      );
+      throw fail('lint_failed', 'err.lint_failed', { n: lineErrors.length, line: first.line, code: first.code, message: issueMsg(first) }, 'err.lint_failed.hint');
     }
   }
 
   const loaded = loadRequests(text, provider);
   const requests = loaded.requests.map((r) => (r.customId === null ? { ...r, customId: `<line ${r.line}>` } : r));
   if (requests.length === 0) {
-    throw new BatchkitError('empty_input', `No requests found in ${inputPath}`, 'Check that the file is JSONL (one request per line) or {"requests":[...]}.');
+    throw fail('empty_input', 'err.empty_input', { path: inputPath }, 'err.empty_input.hint');
   }
 
   // A single request bigger than a shard limit can never be placed.
-  const tooLarge: string[] = [];
+  const tooLarge: Msg[] = [];
   for (const r of requests) {
-    if (r.bytes > limits.maxBytes) tooLarge.push(`line ${r.line}: ${r.bytes} bytes > --max-bytes ${limits.maxBytes}`);
+    if (r.bytes > limits.maxBytes) tooLarge.push({ key: 'err.too_large_bytes', params: { line: r.line, bytes: r.bytes, limit: limits.maxBytes } });
     const t = estimateTokens(r.value);
-    if (limits.maxTokens !== null && t > limits.maxTokens) tooLarge.push(`line ${r.line}: ~${t} tokens > --max-tokens ${limits.maxTokens}`);
+    if (limits.maxTokens !== null && t > limits.maxTokens) tooLarge.push({ key: 'err.too_large_tokens', params: { line: r.line, tokens: t, limit: limits.maxTokens } });
   }
   if (tooLarge.length > 0) {
-    throw new BatchkitError('line_too_large', `line_too_large: ${tooLarge.join('; ')}`, 'Raise the limit or shorten that request; one request cannot be split.');
+    throw fail('line_too_large', 'err.line_too_large', { items: tooLarge, sep: '; ' }, 'err.line_too_large.hint');
   }
 
   // Group by (endpoint, model); Anthropic batches may mix models so they stay in one group.
@@ -122,7 +115,7 @@ export function splitFile(inputPath: string, opts: SplitOptions): SplitResult {
     // A run folder that was already submitted: new shards would not match batches.json and the result files.
     const used = readdirSync(opts.out).filter((f) => f === 'batches.json' || f === 'results.jsonl' || /\.(output|error)\.jsonl$/.test(f));
     if (used.length > 0 && !opts.force) {
-      throw new BatchkitError('out_dir_in_use', `${opts.out} already holds submission state or results (${used.join(', ')})`, 'Split into a new folder (for example run2). To fix a failed batch, edit its shard file there and run submit again. --force re-splits only a folder whose batches all failed validation.');
+      throw fail('out_dir_in_use', 'err.out_dir_in_use', { out: opts.out, used: used.join(', ') }, 'err.out_dir_in_use.hint');
     }
     if (used.length > 0) refuseIfBatchesOwnRequests(opts.out, used);
   }

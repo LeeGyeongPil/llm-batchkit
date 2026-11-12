@@ -8,6 +8,7 @@ export { submit, collect, type SubmitOptions, type SubmitResult, type CollectOpt
 export { PRESETS, resolveLimits, type Preset, type Limits } from './providers.js';
 export { parseSize } from './size.js';
 export { BatchkitError } from './errors.js';
+export { resolveLang, t, type Lang } from './i18n.js';
 export { startMockServer, MOCK_NOTICE, type MockServer } from './mock/server.js';
 export { DEFAULT_SCENARIO, parseScenario, type Scenario } from './mock/scenario.js';
 export type { Manifest, ShardInfo } from './manifest.js';

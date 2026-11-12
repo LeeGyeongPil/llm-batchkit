@@ -1,12 +1,12 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { t } from '../i18n.js';
 import { loadRequests } from '../jsonl.js';
 import { lintText } from '../lint.js';
 import { DEFAULT_SCENARIO, type Outcome, type Scenario } from './scenario.js';
 
 /** Banner shown wherever the mock is used: it is a teaching aid, not the real service. */
-export const MOCK_NOTICE =
-  'PRACTICE MOCK MODE: a local stand-in for a Batch API (127.0.0.1 only). It does not reproduce real timing, limits, prices or error texts.';
+export const MOCK_NOTICE = t('en', 'mock.notice');
 
 export interface RouteLog {
   method: string;
