@@ -5,6 +5,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-13
+
+### Changed
+- The first stderr line of a `BatchkitError` is now `error: [<code>] <message>` (for example `error: [shard_exceeds_budget] ...`), in both languages. The code name is not translated. The `error: ` prefix is kept.
+- Unchanged: exit codes (1/64/70), `--json` output, the public API, `BatchkitError` values, usage errors (64) without a code.
+
+### Known issues
+- `--help` describes exit code 2 as "still running or not submitted", but `collect` on a folder that was never submitted exits 1 with `error: [nothing_submitted]` (as the README says). The help wording will be corrected in a later release.
+- The regression test for error code names covers `cannot_read_file` only; the other codes share the same code path.
+
 ## [0.2.0] - 2026-11-12
 
 ### Added
