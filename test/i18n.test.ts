@@ -109,9 +109,9 @@ describe('the CLI speaks Korean when asked', () => {
     const en = await cli(['lint', join(tmp(), 'missing.jsonl'), '--lang', 'en']);
     expect(ko.code).toBe(1);
     expect(en.code).toBe(1);
-    expect(ko.err).toMatch(/^error: .*읽을 수 없습니다/);
+    expect(ko.err).toMatch(/^error: \[cannot_read_file\] .*읽을 수 없습니다/);
     expect(ko.err).toMatch(/\n {2}fix: .*확인하십시오/);
-    expect(en.err).toMatch(/^error: Cannot read /);
+    expect(en.err).toMatch(/^error: \[cannot_read_file\] Cannot read /);
     expect(en.err).toContain('  fix: Check the path and permissions.');
   });
 
@@ -229,4 +229,17 @@ describe('bad scenario files are reported in Korean too', () => {
     expect(ko.err).toContain(p);
     expect(ko.err).toMatch(HANGUL);
   });
+});
+
+describe('error code names', () => {
+  for (const lang of ['en', 'ko']) {
+    it(`BatchkitError shows [code] in ${lang}, usage errors do not`, async () => {
+      const r = await cli(['lint', join(tmp(), 'missing.jsonl'), '--lang', lang]);
+      expect(r.code).toBe(1);
+      expect(r.err.split('\n')[0]).toMatch(/^error: \[cannot_read_file\] /);
+      const u = await cli(['bogus-cmd', '--lang', lang]);
+      expect(u.code).toBe(64);
+      expect(u.err.split('\n')[0]).toMatch(/^error: (?!\[)/);
+    });
+  }
 });

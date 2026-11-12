@@ -326,7 +326,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     }
     if (e instanceof BatchkitError) {
       const { message, hint } = errorTexts(e, lang);
-      io.err(`error: ${message}\n${hint ? `  fix: ${hint}\n` : ''}`);
+      io.err(`error: ${e.code ? `[${e.code}] ` : ''}${message}\n${hint ? `  fix: ${hint}\n` : ''}`);
       return 1;
     }
     throw e;
