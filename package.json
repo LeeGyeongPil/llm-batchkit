@@ -1,6 +1,6 @@
 {
   "name": "llm-batchkit",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Lint, split, submit, merge and retry LLM Batch API files (OpenAI, Azure OpenAI, Anthropic) from the command line.",
   "type": "module",
   "license": "MIT",

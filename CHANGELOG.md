@@ -5,6 +5,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-12
+
+### Added
+- English and Korean output. Every command accepts `--lang en|ko`; without it the language comes from `LLM_BATCHKIT_LANG`, then `LC_ALL`, `LC_MESSAGES`, `LANG` (a value starting with `ko` selects Korean, anything else English). Help, usage errors, `error:`/`fix:` lines, the lint text report, split/submit/collect/merge/retry output, the mock server notice and `npm run demo` are translated from one message table (`src/i18n.ts`).
+- `BatchkitError.text` and the exported `resolveLang` / `t` helpers (library). Existing `message`, `hint`, `code` values stay English.
+- `README.ko.md` shows real `--lang ko` output.
+
+### Changed
+- On a machine whose locale starts with `ko` the text output is now Korean by default. A script that compares the text should pin English with `--lang en` or `LLM_BATCHKIT_LANG=en`.
+- Table columns are aligned by terminal width, so Korean headers line up.
+
+### Unchanged
+- `--json` output (including each lint issue `message`), library return values, JSONL/CSV/`manifest.json`/`batches.json` formats, issue and error codes, exit codes and the mock server HTTP responses.
+
 ## [0.1.2] - 2026-11-11
 
 ### Fixed
