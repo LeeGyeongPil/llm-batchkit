@@ -21,7 +21,6 @@ cd llm-batchkit
 npm install          # also builds dist/ automatically after install
 node dist/cli.js --help
 ```
-(Comments: "If you do not have Node.js (macOS): brew install node" and "after installation it also builds (dist/) automatically".)
 
 `llm-batchkit ...` in this document is the same as `node dist/cli.js ...`. To keep it short, register the `llm-batchkit` command with `npm link`. A minimal Linux environment needs `git`, `nodejs` (22.12 or later) and `npm`. There are no runtime dependencies.
 
@@ -30,7 +29,7 @@ Run the whole process in one go, with no API key, against the practice mock serv
 ```bash
 npm run demo
 ```
-If the last line is as follows, it succeeded.
+If the last line is as follows, it succeeded. The output language follows your locale; pin it with `--lang en`.
 ```
 DEMO OK  succeeded 11 · failed 1 (400, not retried) · retried 4
 ```
@@ -178,6 +177,7 @@ You can narrow the kinds with `--only expired,cancelled,missing,failed`.
   - `OPENAI_API_KEY`: key for OpenAI-compatible endpoints
   - `OPENAI_BASE_URL`: optional. Default `https://api.openai.com/v1` (can also be set with `--base-url`)
 - `lint`, `split`, `merge`, `retry` and `npm run demo` need neither keys nor network.
+- **Output language (English / Korean)**: every command accepts `--lang en|ko`. The order is `--lang` > the `LLM_BATCHKIT_LANG` environment variable > `LC_ALL` > `LC_MESSAGES` > `LANG`; a value starting with `ko` selects Korean, anything else (or nothing set) gives English. Example: `LLM_BATCHKIT_LANG=ko node dist/cli.js lint input.jsonl`. It switches the help, the lint report, summaries, `error:`/`fix:` lines, the mock server notice and `npm run demo` (`npm run demo -- --lang ko`). `--json` output, issue codes, exit codes and file formats are identical in both languages. A script that compares the text should pin `--lang en` (or `LLM_BATCHKIT_LANG=en`). The mock server's `listening on http://127.0.0.1:<port>/v1` line has the same format in both languages. The `error:` and `fix:` prefixes and batch status values (such as `completed`) stay in English in both languages.
 - Default limits per provider (as of the 2026-11-11 documentation; sources are in comments in `src/providers.ts`). Limits change, so you can override them with `--max-*`.
 
 | Provider | Requests | File size | Notes |
@@ -288,7 +288,7 @@ npm install /path/to/llm-batchkit
 
 ## Development and contributing
 ```bash
-npm test        # build, then vitest (8 files, 83 tests)
+npm test        # build, then vitest (9 files, 103 tests)
 npm run demo    # practice the whole process without keys
 ```
 

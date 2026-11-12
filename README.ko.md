@@ -4,7 +4,7 @@
 
 Batch 작업은 파일 하나를 올리고 최대 24시간 뒤에 결과를 받는 방식이라, 입력 파일의 실수를 늦게 알게 되고 결과도 여러 파일에 흩어져 돌아옵니다. `llm-batchkit` 은 그 앞뒤의 파일 작업(검사 → 분할 → 병합 → 재시도 파일 만들기)을 줄 번호와 요청 ID 단위로 해 주는 CLI 입니다.
 
-![입력 파일 검사 결과](docs/images/01-lint-bad.png)
+![입력 파일 검사 결과](docs/images/01-lint-bad.ko.png)
 *일부러 망가뜨린 입력 파일을 업로드 전에 검사한 화면. 줄 번호와 오류 코드가 한 줄씩 나옵니다.*
 
 ## 이런 분께
@@ -26,15 +26,15 @@ node dist/cli.js --help
 ## 빠르게 시작하기
 API 키 없이, 저장소에 들어 있는 연습용 mock(모의) 서버로 전체 과정을 한 번에 돌려 봅니다.
 ```bash
-npm run demo
+npm run demo -- --lang ko
 ```
-마지막 줄이 다음과 같으면 성공입니다.
+마지막 줄이 다음과 같으면 성공입니다. (`--lang ko` 를 빼면 환경의 언어를 따릅니다. 영어 출력은 `--lang en`.)
 ```
-DEMO OK  succeeded 11 · failed 1 (400, not retried) · retried 4
+데모 성공  성공 11 · 실패 1 (400, 재시도 안 함) · 재시도 4
 ```
-첫 줄에 `PRACTICE MOCK MODE` 가 찍힙니다. 이는 127.0.0.1 에서만 도는 **연습용 목(mock) 모드**로, 실제 서버의 시간·한도·가격·오류 문구는 재현하지 않습니다.
+첫 줄에 `연습용 목(mock) 모드` 안내가 찍힙니다(영어 출력에서는 `PRACTICE MOCK MODE`). 이는 127.0.0.1 에서만 도는 **연습용 목(mock) 모드**로, 실제 서버의 시간·한도·가격·오류 문구는 재현하지 않습니다.
 
-![데모 6~11단계](docs/images/03-demo-merge.png)
+![데모 6~11단계](docs/images/03-demo-merge.ko.png)
 *병합 결과(성공 7, 실패 2, 만료 1, 취소 1, 누락 1) → 재시도 4건 → 다시 병합(성공 11, 400 한 건만 남음).*
 
 ## 사용법
@@ -52,40 +52,40 @@ DEMO OK  succeeded 11 · failed 1 (400, not retried) · retried 4
 
 ### 시나리오 1. 올리기 전에 검사하기
 ```bash
-node dist/cli.js lint examples/openai/input-bad.jsonl
+node dist/cli.js lint examples/openai/input-bad.jsonl --lang ko
 ```
 ```
-lint examples/openai/input-bad.jsonl  (provider openai)
-  LINE  CODE                 MESSAGE
-  2     duplicate_custom_id  same as line 1
-  3     missing_custom_id    custom_id must be a non-empty string
-  4     url_body_mismatch    body does not look like a /v1/embeddings request
+lint examples/openai/input-bad.jsonl  (제공자 openai)
+  줄    코드                 메시지
+  2     duplicate_custom_id  1번째 줄과 같습니다
+  3     missing_custom_id    custom_id 는 비어 있지 않은 문자열이어야 합니다
+  4     url_body_mismatch    body 가 /v1/embeddings 요청 형식이 아닌 것 같습니다
   6     invalid_json_line    Expected double-quoted property name in JSON at position 163 (line 1 column 164)
-  7     invalid_method       method must be "POST", got "GET"
-  8     empty_line (warn)    blank line (dropped by split)
-  9     invalid_url          url must be a path such as /v1/chat/completions, not a full URL
-  10    missing_model        body.model is required
-  11    stream_not_allowed   stream must not be true in a batch
-  file  model_mismatch       models in one file: gpt-4o-mini, gpt-4.1-mini (split by model first)
-  file  url_mismatch         endpoints in one file: /v1/chat/completions, /v1/embeddings (one endpoint per batch)
-9 requests · 2 models (gpt-4o-mini, gpt-4.1-mini) · 10 errors · 1 warning
+  7     invalid_method       method 는 "POST" 여야 합니다 (현재 "GET")
+  8     empty_line (경고)    빈 줄입니다 (split 이 제거합니다)
+  9     invalid_url          url 은 /v1/chat/completions 같은 경로여야 하며 전체 URL 이면 안 됩니다
+  10    missing_model        body.model 이 필요합니다
+  11    stream_not_allowed   배치에서는 stream 을 true 로 둘 수 없습니다
+  파일  model_mismatch       한 파일에 모델이(가) 섞여 있습니다: gpt-4o-mini, gpt-4.1-mini (먼저 모델별로 나누십시오)
+  파일  url_mismatch         한 파일에 엔드포인트가 섞여 있습니다: /v1/chat/completions, /v1/embeddings (배치 하나에는 엔드포인트 하나만 가능)
+요청 9건 · 모델 2개 (gpt-4o-mini, gpt-4.1-mini) · 오류 10건 · 경고 1건
 ```
-같은 코드의 이슈가 50개를 넘으면 나머지는 `... and N more <code> (use --json to list all)` 로 접고, `--json` 에는 전부 담습니다. 빈 파일은 `empty_file` 오류(종료 코드 1)입니다.
+같은 코드의 이슈가 50개를 넘으면 나머지는 `... 그 밖에 <code> N건 더 있습니다 (전체 목록은 --json 으로 확인하십시오)` 로 접고, `--json` 에는 전부 담습니다. `--json` 출력은 어떤 언어로 실행해도 영어 그대로입니다. 빈 파일은 `empty_file` 오류(종료 코드 1)입니다.
 
-읽는 법: `LINE` 은 입력 파일의 줄 번호, `file` 은 파일 전체에 해당하는 문제입니다. `(warn)` 은 경고라 종료 코드에 영향이 없고(`--strict` 를 주면 실패 처리), 나머지는 오류라 종료 코드가 1 입니다. Anthropic 파일은 `custom_id` 형식(`^[a-zA-Z0-9_-]{1,64}$`)과 `max_tokens`, 금지 파라미터도 검사합니다(`examples/anthropic/requests.json`).
+읽는 법: `줄` 은 입력 파일의 줄 번호, `파일` 은 파일 전체에 해당하는 문제입니다. `(경고)` 는 경고라 종료 코드에 영향이 없고(`--strict` 를 주면 실패 처리), 나머지는 오류라 종료 코드가 1 입니다. Anthropic 파일은 `custom_id` 형식(`^[a-zA-Z0-9_-]{1,64}$`)과 `max_tokens`, 금지 파라미터도 검사합니다(`examples/anthropic/requests.json`).
 
 ### 시나리오 2. 한도에 맞춰 나누기
 ```bash
-node dist/cli.js split examples/openai/input.jsonl --out run1 --max-requests 6
+node dist/cli.js split examples/openai/input.jsonl --out run1 --max-requests 6 --lang ko
 ```
 ```
 split examples/openai/input.jsonl -> run1
-  SHARD            REQUESTS  BYTES  EST_TOKENS  MODEL
-  shard-000.jsonl  6         1692   205         gpt-4o-mini
-  shard-001.jsonl  6         1679   203         gpt-4o-mini
-2 shards · 12 requests · manifest: run1/manifest.json
+  샤드             요청 수  바이트  추정 토큰  모델
+  shard-000.jsonl  6        1692    205        gpt-4o-mini
+  shard-001.jsonl  6        1679    203        gpt-4o-mini
+샤드 2개 · 요청 12건 · manifest: run1/manifest.json
 ```
-![분할 결과](docs/images/02-split.png)
+![분할 결과](docs/images/02-split.ko.png)
 *12건을 6건씩 샤드 2개로 나눈 화면. `manifest.json` 에 원래 순서와 샤드 대응이 기록됩니다.*
 
 읽는 법: `EST_TOKENS` 는 글자 수 ÷ 4 로 어림한 값입니다. `split` 은 줄 단위 오류가 있는 파일을 거부하므로 먼저 `lint` 를 통과시키세요.
@@ -104,17 +104,18 @@ node dist/cli.js retry run1/results.jsonl --out run1/retry-1
 `npm run demo` 가 같은 순서를 한 번에 보여 주며, 그 출력은 다음과 같습니다(경로는 줄였습니다).
 ```
 $ llm-batchkit merge run1/manifest.json
-succeeded 7 · failed 2 (400×1, 500×1) · expired 1 · cancelled 1 · missing 1
-  req-004  failed  400  shard-000.output.jsonl  (not retried by default)
-  req-006  missing  -  -
-  req-009  expired  batch_expired  shard-001.error.jsonl
-  req-011  failed  500  shard-001.error.jsonl
-  req-012  cancelled  batch_cancelled  shard-001.error.jsonl
+merge 결과 파일 3개 -> run1/results.jsonl
+성공 7 · 실패 2 (400×1, 500×1) · 만료 1 · 취소 1 · 누락 1
+  req-004  실패  400  shard-000.output.jsonl  (기본값으로는 재시도하지 않음)
+  req-006  누락  -  -
+  req-009  만료  batch_expired  shard-001.error.jsonl
+  req-011  실패  500  shard-001.error.jsonl
+  req-012  취소  batch_cancelled  shard-001.error.jsonl
 
 $ llm-batchkit retry run1/results.jsonl --out run1/retry-1
-  req-004  excluded: 400 (client error, use --include-4xx)
-4 to retry · 1 excluded
-wrote run1/retry-1/input.jsonl (4 requests, original lines unchanged)
+  req-004  제외: 400 (클라이언트 오류, 포함하려면 --include-4xx)
+재시도 4건 · 제외 1건
+run1/retry-1/input.jsonl 를 만들었습니다 (요청 4건, 원본 줄은 그대로)
 ```
 읽는 법: `req-004` 는 400 응답이 **output 파일**에 들어 있었고, `req-011` 은 500 이 **error 파일**에 있었습니다. 파일 종류가 아니라 줄 내용으로 분류하기 때문에 둘 다 실패로 잡힙니다. 400 같은 요청 자체의 오류는 다시 보내도 같은 결과라서 기본으로 제외합니다.
 
@@ -126,15 +127,15 @@ node dist/cli.js collect run1/retry-1/manifest.json --base-url http://127.0.0.1:
 node dist/cli.js merge run1/manifest.json
 ```
 ```
-  shard-000.jsonl  submitted
-1 submitted · 0 already submitted · 0 held
+  shard-000.jsonl  제출함
+제출함 1건 · 이미 제출 0건 · 보류 0건
   shard-000.jsonl  completed -> shard-000.output.jsonl
-all batches finished - run `merge` next
-merge 4 result files -> run1/results.jsonl
-succeeded 11 · failed 1 (400×1)
-  req-004  failed  400  shard-000.output.jsonl  (not retried by default)
+모든 배치가 끝났습니다 - 다음으로 `merge` 를 실행하십시오
+merge 결과 파일 4개 -> run1/results.jsonl
+성공 11 · 실패 1 (400×1)
+  req-004  실패  400  shard-000.output.jsonl  (기본값으로는 재시도하지 않음)
 ```
-여기서 `retry` 를 다시 실행하면 `nothing to retry (1 excluded)` 가 나옵니다. 성공한 행은 다시 고르지 않습니다. 성공한 결과는 항상 실패보다 우선하고, 성공이 여러 번이면 첫 성공을 남기며 중복으로 보고합니다. Anthropic 결과는 공식 방법으로 받은 파일을 `*.results.jsonl` 이름으로 manifest 옆에 두거나 `merge <manifest> <파일...>` 인자로 넘기세요.
+여기서 `retry` 를 다시 실행하면 `재시도할 항목이 없습니다 (1건 제외)` 가 나옵니다. 성공한 행은 다시 고르지 않습니다. 성공한 결과는 항상 실패보다 우선하고, 성공이 여러 번이면 첫 성공을 남기며 중복으로 보고합니다. Anthropic 결과는 공식 방법으로 받은 파일을 `*.results.jsonl` 이름으로 manifest 옆에 두거나 `merge <manifest> <파일...>` 인자로 넘기세요.
 
 ### 실패한 배치 고치기
 제공자가 입력 검증으로 배치를 거부하면 `collect` 가 종료 코드 1 과 줄 번호가 붙은 오류를 냅니다. 해당 샤드 파일(`run1/shard-000.jsonl`)을 고친 뒤 `submit` 을 다시 실행하세요. `submit` 은 파일 내용보다 **배치 상태를 먼저** 봅니다.
@@ -148,16 +149,16 @@ succeeded 11 · failed 1 (400×1)
 
 옛 결과 파일은 지우지 않고 `shard-000.output.replaced-<batch_id>.jsonl` 로 이름을 바꿔 보관하며, `merge` 는 이 파일을 쓰지 않습니다. 실제로 mock 서버에서 완료된 `shard-000.jsonl` 끝에 빈 줄을 붙인 뒤 실행한 결과입니다.
 ```
-$ llm-batchkit submit run1/manifest.json --base-url http://127.0.0.1:<port>/v1
-error: refusing to submit - nothing was uploaded:
-  shard-000.jsonl changed after batch_mock_1 completed
-  fix: Its results are already there. Restore the shard file, or split the edited input into a new folder. To send it again on purpose (the requests are billed again) pass --resubmit-changed.
+$ llm-batchkit submit run1/manifest.json --base-url http://127.0.0.1:<port>/v1 --lang ko
+error: 제출을 거부합니다 - 아무것도 업로드하지 않았습니다:
+  shard-000.jsonl 이(가) batch_mock_1 completed 이후 바뀌었습니다
+  fix: 결과가 이미 있습니다. 샤드 파일을 되돌리거나, 수정한 입력을 새 폴더로 나누십시오. 의도적으로 다시 보내려면(요청이 다시 과금됩니다) --resubmit-changed 를 지정하십시오.
 
-$ llm-batchkit submit run1/manifest.json --base-url http://127.0.0.1:<port>/v1 --resubmit-changed
-  shard-000.jsonl  submitted (replaces an earlier batch: changed after completed batch_mock_1)
-  shard-001.jsonl  already submitted (skipped)
-kept old result files as shard-000.output.replaced-batch_mock_1.jsonl (merge ignores them)
-1 submitted · 1 already submitted · 0 held
+$ llm-batchkit submit run1/manifest.json --base-url http://127.0.0.1:<port>/v1 --resubmit-changed --lang ko
+  shard-000.jsonl  제출함 (이전 배치를 대체합니다: completed 상태의 batch_mock_1 이후 파일이 변경됨)
+  shard-001.jsonl  이미 제출됨 (건너뜀)
+이전 결과 파일을 shard-000.output.replaced-batch_mock_1.jsonl 로 보관했습니다 (merge 는 이 파일을 무시합니다)
+제출함 1건 · 이미 제출 1건 · 보류 0건
 ```
 첫 명령은 종료 코드 1, 둘째는 0 입니다. 이미 결과가 있는 폴더에 `split` 하면 `out_dir_in_use` 로 거부하고, `--force` 는 배치가 전부 `failed` 인 폴더에서만 샤드 파일을 덮어씁니다. 진행 중이거나 완료된 배치가 있으면 `--force` 도 `out_dir_has_batches` 로 거부하므로 새 폴더(`--out run2`)에 나누세요.
 
@@ -176,6 +177,7 @@ kept old result files as shard-000.output.replaced-batch_mock_1.jsonl (merge ign
   - `OPENAI_API_KEY`: OpenAI 호환 엔드포인트용 키
   - `OPENAI_BASE_URL`: 선택. 기본 `https://api.openai.com/v1` (`--base-url` 로도 지정)
 - `lint`·`split`·`merge`·`retry`·`npm run demo` 는 키도 네트워크도 필요 없습니다.
+- **출력 언어(영어·한국어)**: 모든 명령에서 `--lang en|ko` 를 받습니다. 정하는 순서는 `--lang` > 환경변수 `LLM_BATCHKIT_LANG` > `LC_ALL` > `LC_MESSAGES` > `LANG` 이며, 값이 `ko` 로 시작하면 한국어, 그 밖이거나 설정이 없으면 영어입니다. 예: `LLM_BATCHKIT_LANG=ko node dist/cli.js lint input.jsonl`. 도움말·검사 보고서·요약·`error:`/`fix:` 줄·mock 서버 안내·`npm run demo` 가 바뀌고, `--json` 출력·이슈 코드·종료 코드·파일 형식은 어느 언어로 실행해도 같습니다. 문구를 그대로 비교하는 스크립트는 `--lang en`(또는 `LLM_BATCHKIT_LANG=en`)으로 고정하세요. mock 서버의 `listening on http://127.0.0.1:<포트>/v1` 줄은 두 언어에서 형식이 같습니다. `npm run demo` 는 `npm run demo -- --lang ko` 로 언어를 고릅니다. `error:`·`fix:` 접두어와 배치 상태값(`completed` 등)은 언어와 무관하게 영어 그대로입니다.
 - 제공자별 기본 한도(2026-11-11 문서 기준, `src/providers.ts` 주석에 출처). 한도는 바뀌므로 `--max-*` 로 덮어쓸 수 있습니다.
 
 | 제공자 | 요청 수 | 파일 크기 | 비고 |
@@ -286,7 +288,7 @@ npm install /path/to/llm-batchkit
 
 ## 개발·기여
 ```bash
-npm test        # 빌드 후 vitest (8 파일, 83 테스트)
+npm test        # 빌드 후 vitest (9 파일, 103 테스트)
 npm run demo    # 키 없이 전체 과정 연습
 ```
 버그·제안은 이슈로 남겨 주세요. 변경 기록은 [CHANGELOG.md](CHANGELOG.md).
