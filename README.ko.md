@@ -150,7 +150,7 @@ merge 결과 파일 4개 -> run1/results.jsonl
 옛 결과 파일은 지우지 않고 `shard-000.output.replaced-<batch_id>.jsonl` 로 이름을 바꿔 보관하며, `merge` 는 이 파일을 쓰지 않습니다. 실제로 mock 서버에서 완료된 `shard-000.jsonl` 끝에 빈 줄을 붙인 뒤 실행한 결과입니다.
 ```
 $ llm-batchkit submit run1/manifest.json --base-url http://127.0.0.1:<port>/v1 --lang ko
-error: 제출을 거부합니다 - 아무것도 업로드하지 않았습니다:
+error: [shard_changed] 제출을 거부합니다 - 아무것도 업로드하지 않았습니다:
   shard-000.jsonl 이(가) batch_mock_1 completed 이후 바뀌었습니다
   fix: 결과가 이미 있습니다. 샤드 파일을 되돌리거나, 수정한 입력을 새 폴더로 나누십시오. 의도적으로 다시 보내려면(요청이 다시 과금됩니다) --resubmit-changed 를 지정하십시오.
 
@@ -177,7 +177,7 @@ $ llm-batchkit submit run1/manifest.json --base-url http://127.0.0.1:<port>/v1 -
   - `OPENAI_API_KEY`: OpenAI 호환 엔드포인트용 키
   - `OPENAI_BASE_URL`: 선택. 기본 `https://api.openai.com/v1` (`--base-url` 로도 지정)
 - `lint`·`split`·`merge`·`retry`·`npm run demo` 는 키도 네트워크도 필요 없습니다.
-- **출력 언어(영어·한국어)**: 모든 명령에서 `--lang en|ko` 를 받습니다. 정하는 순서는 `--lang` > 환경변수 `LLM_BATCHKIT_LANG` > `LC_ALL` > `LC_MESSAGES` > `LANG` 이며, 값이 `ko` 로 시작하면 한국어, 그 밖이거나 설정이 없으면 영어입니다. 예: `LLM_BATCHKIT_LANG=ko node dist/cli.js lint input.jsonl`. 도움말·검사 보고서·요약·`error:`/`fix:` 줄·mock 서버 안내·`npm run demo` 가 바뀌고, `--json` 출력·이슈 코드·종료 코드·파일 형식은 어느 언어로 실행해도 같습니다. 문구를 그대로 비교하는 스크립트는 `--lang en`(또는 `LLM_BATCHKIT_LANG=en`)으로 고정하세요. mock 서버의 `listening on http://127.0.0.1:<포트>/v1` 줄은 두 언어에서 형식이 같습니다. `npm run demo` 는 `npm run demo -- --lang ko` 로 언어를 고릅니다. `error:`·`fix:` 접두어와 배치 상태값(`completed` 등)은 언어와 무관하게 영어 그대로입니다.
+- **출력 언어(영어·한국어)**: 모든 명령에서 `--lang en|ko` 를 받습니다. 정하는 순서는 `--lang` > 환경변수 `LLM_BATCHKIT_LANG` > `LC_ALL` > `LC_MESSAGES` > `LANG` 이며, 값이 `ko` 로 시작하면 한국어, 그 밖이거나 설정이 없으면 영어입니다. 예: `LLM_BATCHKIT_LANG=ko node dist/cli.js lint input.jsonl`. 도움말·검사 보고서·요약·`error:`/`fix:` 줄·mock 서버 안내·`npm run demo` 가 바뀌고, `--json` 출력·이슈 코드·종료 코드·파일 형식은 어느 언어로 실행해도 같습니다. 문구를 그대로 비교하는 스크립트는 `--lang en`(또는 `LLM_BATCHKIT_LANG=en`)으로 고정하세요. mock 서버의 `listening on http://127.0.0.1:<포트>/v1` 줄은 두 언어에서 형식이 같습니다. `npm run demo` 는 `npm run demo -- --lang ko` 로 언어를 고릅니다. 오류 코드 이름은 대괄호로(`error: [shard_changed] ...`) 언어와 무관하게 같게 표시됩니다. `error:`·`fix:` 접두어와 배치 상태값(`completed` 등)은 언어와 무관하게 영어 그대로입니다.
 - 제공자별 기본 한도(2026-11-11 문서 기준, `src/providers.ts` 주석에 출처). 한도는 바뀌므로 `--max-*` 로 덮어쓸 수 있습니다.
 
 | 제공자 | 요청 수 | 파일 크기 | 비고 |
@@ -268,7 +268,7 @@ npm install /path/to/llm-batchkit
 - 테스트 파일은 빌드(`tsc`)의 타입 검사 대상이 아닙니다.
 - 중복 제출 방지는 폴더(`batches.json`) 단위입니다. 같은 요청을 다른 폴더에서 다시 `submit` 하면 다시 과금되니, 새 폴더에는 바뀐 요청만 넣으세요.
 - HTTP 요청별 타임아웃이 없어 응답하지 않는 서버에서는 Ctrl+C 로 끊어야 합니다.
-- 알려진 표시 문제: `submit` 출력은 샤드를 manifest 순서가 아니라 새로 올린 것 먼저, 이미 제출된 것 나중 순서로 찍습니다. 오류 메시지에는 `out_dir_in_use`·`shard_exceeds_budget` 같은 코드명이 찍히지 않으니 이 문서의 코드명은 메시지 문구로 찾으세요. `npm run demo` 는 경로를 절대 경로로 출력합니다(환경마다 다름).
+- 알려진 표시 문제: `submit` 출력은 샤드를 manifest 순서가 아니라 새로 올린 것 먼저, 이미 제출된 것 나중 순서로 찍습니다. `npm run demo` 는 경로를 절대 경로로 출력합니다(환경마다 다름).
 - npm 에 게시되지 않았습니다.
 
 ## 언제 쓰나
@@ -282,13 +282,13 @@ npm install /path/to/llm-batchkit
 | `merge` 가 "No *.output.jsonl / *.error.jsonl files" 오류 | 아직 `collect` 를 하지 않음 | `collect` 를 먼저 실행하거나 결과 파일을 인자로 직접 전달 |
 | `collect` 종료 코드 2 | 일부 배치가 아직 진행 중이거나 보류 | `--wait` 로 기다리거나 나중에 다시 실행 |
 | `collect` 가 `batches.json has no submitted shards` 로 종료 코드 1 | 아직 `submit` 하지 않은 폴더 | 먼저 `submit` 을 실행 |
-| `shard_exceeds_budget` | 샤드 하나가 `--max-enqueued-tokens` 보다 큼 | `split --max-tokens` 를 낮춰 샤드를 더 작게 만들기 |
+| `error: [shard_exceeds_budget] ...` | 샤드 하나가 `--max-enqueued-tokens` 보다 큼 | `split --max-tokens` 를 낮춰 샤드를 더 작게 만들기 |
 | `submit` 에서 키 오류 | `OPENAI_API_KEY` 가 없음 | 환경변수를 설정하거나 로컬 `--base-url`(mock) 사용 |
 | `retry` 가 "nothing to retry" | 재시도할 만한 행이 없음(남은 4xx 는 제외됨) | 요청을 고친 뒤 `--include-4xx` 로 포함 |
 
 ## 개발·기여
 ```bash
-npm test        # 빌드 후 vitest (9 파일, 103 테스트)
+npm test        # 빌드 후 vitest (9 파일, 105 테스트)
 npm run demo    # 키 없이 전체 과정 연습
 ```
 버그·제안은 이슈로 남겨 주세요. 변경 기록은 [CHANGELOG.md](CHANGELOG.md).

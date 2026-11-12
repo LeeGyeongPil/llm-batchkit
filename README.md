@@ -150,7 +150,7 @@ If the provider rejects a batch during input validation, `collect` gives exit co
 Old result files are not deleted but renamed to `shard-000.output.replaced-<batch_id>.jsonl` and kept, and `merge` does not use them. This is the actual result of appending a blank line to the end of the completed `shard-000.jsonl` on the mock server and then running.
 ```
 $ llm-batchkit submit run1/manifest.json --base-url http://127.0.0.1:<port>/v1
-error: refusing to submit - nothing was uploaded:
+error: [shard_changed] refusing to submit - nothing was uploaded:
   shard-000.jsonl changed after batch_mock_1 completed
   fix: Its results are already there. Restore the shard file, or split the edited input into a new folder. To send it again on purpose (the requests are billed again) pass --resubmit-changed.
 
@@ -177,7 +177,7 @@ You can narrow the kinds with `--only expired,cancelled,missing,failed`.
   - `OPENAI_API_KEY`: key for OpenAI-compatible endpoints
   - `OPENAI_BASE_URL`: optional. Default `https://api.openai.com/v1` (can also be set with `--base-url`)
 - `lint`, `split`, `merge`, `retry` and `npm run demo` need neither keys nor network.
-- **Output language (English / Korean)**: every command accepts `--lang en|ko`. The order is `--lang` > the `LLM_BATCHKIT_LANG` environment variable > `LC_ALL` > `LC_MESSAGES` > `LANG`; a value starting with `ko` selects Korean, anything else (or nothing set) gives English. Example: `LLM_BATCHKIT_LANG=ko node dist/cli.js lint input.jsonl`. It switches the help, the lint report, summaries, `error:`/`fix:` lines, the mock server notice and `npm run demo` (`npm run demo -- --lang ko`). `--json` output, issue codes, exit codes and file formats are identical in both languages. A script that compares the text should pin `--lang en` (or `LLM_BATCHKIT_LANG=en`). The mock server's `listening on http://127.0.0.1:<port>/v1` line has the same format in both languages. The `error:` and `fix:` prefixes and batch status values (such as `completed`) stay in English in both languages.
+- **Output language (English / Korean)**: every command accepts `--lang en|ko`. The order is `--lang` > the `LLM_BATCHKIT_LANG` environment variable > `LC_ALL` > `LC_MESSAGES` > `LANG`; a value starting with `ko` selects Korean, anything else (or nothing set) gives English. Example: `LLM_BATCHKIT_LANG=ko node dist/cli.js lint input.jsonl`. It switches the help, the lint report, summaries, `error:`/`fix:` lines, the mock server notice and `npm run demo` (`npm run demo -- --lang ko`). `--json` output, issue codes, exit codes and file formats are identical in both languages. A script that compares the text should pin `--lang en` (or `LLM_BATCHKIT_LANG=en`). The mock server's `listening on http://127.0.0.1:<port>/v1` line has the same format in both languages. Error code names are shown in square brackets (`error: [shard_changed] ...`) and are the same in both languages. The `error:` and `fix:` prefixes and batch status values (such as `completed`) stay in English in both languages.
 - Default limits per provider (as of the 2026-11-11 documentation; sources are in comments in `src/providers.ts`). Limits change, so you can override them with `--max-*`.
 
 | Provider | Requests | File size | Notes |
@@ -268,7 +268,7 @@ npm install /path/to/llm-batchkit
 - Test files are not subject to the type check of the build (`tsc`).
 - Duplicate-submission prevention works per folder (`batches.json`). If you `submit` the same requests again from a different folder, they are billed again, so put only the changed requests in a new folder.
 - There is no per-request HTTP timeout, so with a server that does not respond you have to interrupt with Ctrl+C.
-- Known display issues: `submit` output prints shards with newly uploaded ones first and already-submitted ones after, not in manifest order. Code names such as `out_dir_in_use` and `shard_exceeds_budget` are not printed in error messages, so find the code names in this document by the message wording. `npm run demo` prints paths as absolute paths (this differs by environment).
+- Known display issues: `submit` output prints shards with newly uploaded ones first and already-submitted ones after, not in manifest order. `npm run demo` prints paths as absolute paths (this differs by environment).
 - It is not published to npm.
 
 ## When to use it
@@ -282,13 +282,13 @@ npm install /path/to/llm-batchkit
 | `merge` gives a "No *.output.jsonl / *.error.jsonl files" error | `collect` has not been run yet | Run `collect` first, or pass the result files directly as arguments |
 | `collect` exit code 2 | Some batches are still in progress or held | Wait with `--wait`, or run again later |
 | `collect` exits with code 1 and `batches.json has no submitted shards` | A folder that has not been `submit`ted yet | Run `submit` first |
-| `shard_exceeds_budget` | One shard is larger than `--max-enqueued-tokens` | Lower `split --max-tokens` to make shards smaller |
+| `error: [shard_exceeds_budget] ...` | One shard is larger than `--max-enqueued-tokens` | Lower `split --max-tokens` to make shards smaller |
 | Key error in `submit` | `OPENAI_API_KEY` is missing | Set the environment variable, or use a local `--base-url` (mock) |
 | `retry` says "nothing to retry" | There are no rows worth retrying (remaining 4xx are excluded) | Fix the requests and include them with `--include-4xx` |
 
 ## Development and contributing
 ```bash
-npm test        # build, then vitest (9 files, 103 tests)
+npm test        # build, then vitest (9 files, 105 tests)
 npm run demo    # practice the whole process without keys
 ```
 
