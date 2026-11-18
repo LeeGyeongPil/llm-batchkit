@@ -288,7 +288,7 @@ npm install /path/to/llm-batchkit
 
 ## Development and contributing
 ```bash
-npm test        # build, then vitest (9 files, 105 tests)
+npm test        # build, then vitest (9 files, 106 tests)
 npm run demo    # practice the whole process without keys
 ```
 

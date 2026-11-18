@@ -33,7 +33,7 @@ Usage:
 Every command accepts --lang en|ko (output language).
 Language order: --lang > LLM_BATCHKIT_LANG > LC_ALL > LC_MESSAGES > LANG (a value starting with "ko" selects Korean, anything else English).
 
-Exit codes: lint 1 on errors; collect 0 done / 1 a batch failed validation / 2 still running or not submitted;
+Exit codes: lint 1 on errors; collect 0 done / 1 a batch failed validation or no shard was submitted / 2 some still running or held;
 submit 1 when a shard changed after its batch was created (nothing is uploaded then).
 submit/collect need OPENAI_API_KEY (or a local --base-url such as the mock server). Everything else works offline.
 `;
@@ -52,7 +52,7 @@ const HELP_KO = `llm-batchkit - LLM Batch API 파일을 점검(lint)하고, 나�
 모든 명령에서 --lang en|ko (출력 언어)를 받습니다.
 언어 결정 순서: --lang > LLM_BATCHKIT_LANG > LC_ALL > LC_MESSAGES > LANG ("ko" 로 시작하는 값이면 한국어, 그 밖에는 영어).
 
-종료 코드: lint 는 오류가 있으면 1, collect 는 0 완료 / 1 배치 검증 실패 / 2 진행 중이거나 제출 전,
+종료 코드: lint 는 오류가 있으면 1, collect 는 0 완료 / 1 배치 검증 실패 또는 제출된 샤드 없음 / 2 진행 중이거나 보류됨,
 submit 은 배치를 만든 뒤 샤드가 바뀌었으면 1 (이때는 아무것도 업로드하지 않습니다).
 submit/collect 에는 OPENAI_API_KEY 가 필요합니다 (또는 목 서버 같은 로컬 --base-url). 나머지 명령은 오프라인으로 동작합니다.
 `;

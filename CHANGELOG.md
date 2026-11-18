@@ -3,7 +3,10 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.1] - 2026-11-19
+
+### Fixed
+- `--help` now describes the `collect` exit codes as the code behaves and the README says: 1 also covers a folder with no submitted shards (`nothing_submitted`), 2 means some shards are still running or held.
 
 ## [0.3.0] - 2026-11-13
 

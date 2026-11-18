@@ -84,6 +84,15 @@ describe('the CLI speaks Korean when asked', () => {
     expect(en.out).toContain('LLM_BATCHKIT_LANG');
   });
 
+  it('--help describes collect exit codes as the code behaves (no shard submitted = 1)', async () => {
+    const en = await cli(['--help', '--lang', 'en']);
+    expect(en.out).toContain('1 a batch failed validation or no shard was submitted / 2 some still running or held');
+    expect(en.out).not.toContain('not submitted');
+    const ko = await cli(['--help', '--lang', 'ko']);
+    expect(ko.out).toContain('1 배치 검증 실패 또는 제출된 샤드 없음 / 2 진행 중이거나 보류됨');
+    expect(ko.out).not.toContain('제출 전');
+  });
+
   it('every sub-command accepts --lang (even after its own options)', async () => {
     for (const cmd of ['lint', 'split', 'submit', 'collect', 'merge', 'retry']) {
       const r = await cli([cmd, '--lang', 'ko']);

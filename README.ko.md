@@ -288,7 +288,7 @@ npm install /path/to/llm-batchkit
 
 ## 개발·기여
 ```bash
-npm test        # 빌드 후 vitest (9 파일, 105 테스트)
+npm test        # 빌드 후 vitest (9 파일, 106 테스트)
 npm run demo    # 키 없이 전체 과정 연습
 ```
 버그·제안은 이슈로 남겨 주세요. 변경 기록은 [CHANGELOG.md](CHANGELOG.md).
